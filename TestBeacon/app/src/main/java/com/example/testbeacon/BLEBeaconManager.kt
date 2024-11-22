@@ -8,10 +8,14 @@ import android.bluetooth.le.AdvertiseSettings
 import android.content.Context
 import android.content.pm.PackageManager
 import android.util.Log
+import androidx.compose.runtime.derivedStateOf
 import androidx.core.content.ContextCompat
 
 class BLEBeaconManager(private val context: Context) {
     private val bluetoothAdapter : BluetoothAdapter? = BluetoothAdapter.getDefaultAdapter()
+
+    public var major: Int = 1
+    public var minor: Int = 1
 
     fun startIBeaconAdvertising() {
         if(!hasPermissions()) {
@@ -35,13 +39,13 @@ class BLEBeaconManager(private val context: Context) {
         // uuid should be unique for each state, major, minor to be decided, don't fully understand txPower yet
         val beaconData = createIBeaconData(
             uuid = "9350C882-A23F-43B9-A176-A9C2AEEB1A5C",
-            major = 1,
-            minor = 1,
-            txPower = -59
+            major = major,
+            minor = minor,
+            txPower = 55
         )
 
         val data = AdvertiseData.Builder()
-            .addManufacturerData(0x004C, beaconData) // 0x004C is Apple's Manufacturer ID
+            .addManufacturerData(0x4C00, beaconData) // 0x4C00 is Apple's Manufacturer ID
             .build()
 
         advertiser.startAdvertising(settings, data, advertiseCallback)

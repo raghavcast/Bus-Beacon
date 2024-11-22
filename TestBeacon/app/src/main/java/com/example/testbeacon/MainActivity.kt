@@ -14,8 +14,14 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -26,6 +32,7 @@ import com.example.testbeacon.ui.theme.TestBeaconTheme
 class MainActivity : AppCompatActivity() {
     private lateinit var bleBeaconManager: BLEBeaconManager
 
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -35,12 +42,19 @@ class MainActivity : AppCompatActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    TextBox(
-                        name = "Android",
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(8.dp)
-                    )
+                    Column(
+                        modifier = Modifier.fillMaxSize(),
+                        verticalArrangement = Arrangement.Center
+                    ) {
+                        TextBox(
+                            name = "Android",
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(8.dp)
+                        )
+//                        CustomTextInputComponent("Major", {_ -> Unit})
+                    }
+
                 }
             }
         }
@@ -121,4 +135,24 @@ fun GreetingPreview() {
     TestBeaconTheme {
         TextBox("Android")
     }
+}
+
+
+
+@Composable
+fun CustomTextInputComponent(
+    textValue: String,
+    onTextChanged: (String) -> Unit,
+    label: String
+) {
+    var textFieldValue by remember {
+        mutableStateOf(TextFieldValue(text = textValue))
+    }
+    TextField(
+        value = textFieldValue,
+        onValueChange = { newValue ->
+            textFieldValue = newValue
+            onTextChanged(newValue.text)
+        }
+    )
 }
