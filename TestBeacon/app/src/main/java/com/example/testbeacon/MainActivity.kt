@@ -34,6 +34,16 @@ class MainActivity : AppCompatActivity() {
     private val busHash: HashMap<String, String> =
         HashMap()
 
+    private val advertiseCallback = object : AdvertiseCallback() {
+        override fun onStartSuccess(settingsInEffect: AdvertiseSettings?) {
+            Log.i("BLE", "Advertising started successfully")
+        }
+
+        override fun onStartFailure(errorCode: Int) {
+            Log.e("BLE", "Advertising failed with error code: $errorCode")
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 //        enableEdgeToEdge()
@@ -129,22 +139,18 @@ class MainActivity : AppCompatActivity() {
             requestPermissions()
         }
 
-        bluetoothLeAdvertiser.startAdvertising(settings, data, object: AdvertiseCallback() {
-            override fun onStartSuccess(settingsInEffect: AdvertiseSettings?) {
-                isAdvertising = true
-                val busText: String = busHash[radioButton.text]?: "Unknown bus"
-                statusTextView.text = getString(R.string.advertising_success, radioButton.text, busText)
-                startButton.visibility = View.GONE
-                stopButton.visibility = View.VISIBLE
-                radioGroup.visibility = View.GONE
-                Log.i("iBeacon", "Beacon advertising started successfully")
-            }
-
-            override fun onStartFailure(errorCode: Int) {
-                statusTextView.text = getString(R.string.advertising_failure, errorCode)
-                Log.e("iBeacon", "Beacon advertising failed: ($errorCode)")
-            }
-        })
+        try {
+            bluetoothLeAdvertiser.startAdvertising(settings, data, advertiseCallback)
+            Log.i("iBeacon", "Beacon advertising started successfully")
+        } catch (e: Exception) {
+            Log.e("iBeacon", "Beacon advertising failed: ($e.message)")
+        }
+        isAdvertising = true
+        val busText: String = busHash[radioButton.text]?: "Unknown bus"
+        statusTextView.text = getString(R.string.advertising_success, radioButton.text, busText)
+        startButton.visibility = View.GONE
+        stopButton.visibility = View.VISIBLE
+        radioGroup.visibility = View.GONE
     }
 
     private fun stopBeacon() {
@@ -156,21 +162,11 @@ class MainActivity : AppCompatActivity() {
             requestPermissions()
         }
 
-        val advertiseCallback = object : AdvertiseCallback() {
-            override fun onStartSuccess(settingsInEffect: AdvertiseSettings?) {
-                Log.i("BLE", "Advertising started successfully")
-            }
-
-            override fun onStartFailure(errorCode: Int) {
-                Log.e("BLE", "Advertising failed with error code: $errorCode")
-            }
-        }
-
         try {
             bluetoothLeAdvertiser.stopAdvertising(advertiseCallback)
-            Log.i("BLE", "Advertising stopped successfully")
+            Log.i("iBeacon", "Advertising stopped successfully")
         } catch (e: Exception) {
-            Log.e("BLE", "Error stopping advertising: ${e.message}")
+            Log.e("iBeacon", "Error stopping advertising: ${e.message}")
         }
 
         isAdvertising = false
