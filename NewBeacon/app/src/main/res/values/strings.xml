@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">TestBeacon</string>
+    <string name="app_name">NewBeacon</string>
     <string name="advertising_success">"Status: Advertising as iBeacon\nBus number: %s\nUUID: %s"</string>
     <string name="advertising_failure">"Status: failed to start advertising %1d"</string>
     <string name="stop_advertising">"Status: Not advertising"</string>

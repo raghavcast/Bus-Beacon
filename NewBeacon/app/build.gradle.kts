@@ -5,11 +5,11 @@ plugins {
 }
 
 android {
-    namespace = "com.example.testbeacon"
+    namespace = "com.example.newbeacon"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.example.testbeacon"
+        applicationId = "com.example.newbeacon"
         minSdk = 25
         targetSdk = 34
         versionCode = 1
@@ -40,8 +40,7 @@ android {
 }
 
 dependencies {
-
-    implementation(libs.play.services.location)
+    implementation(libs.altbeacon.android.beacon.library)
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
@@ -50,7 +49,6 @@ dependencies {
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
-    implementation(libs.androidx.appcompat)
     implementation(libs.androidx.constraintlayout)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
