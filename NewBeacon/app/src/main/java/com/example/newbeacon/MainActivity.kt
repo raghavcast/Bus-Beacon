@@ -42,6 +42,7 @@ class MainActivity : ComponentActivity() {
     }
     private val requiredPermissions = arrayOf(
         android.Manifest.permission.ACCESS_FINE_LOCATION,
+        android.Manifest.permission.BLUETOOTH_ADMIN,
         android.Manifest.permission.BLUETOOTH_ADVERTISE,
         android.Manifest.permission.BLUETOOTH_SCAN,
         android.Manifest.permission.BLUETOOTH_CONNECT
