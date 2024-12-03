@@ -26,6 +26,7 @@ import android.widget.Toast
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
+import kotlinx.coroutines.selects.select
 
 class MainActivity : AppCompatActivity() {
     private lateinit var statusTextView: TextView
@@ -54,7 +55,7 @@ class MainActivity : AppCompatActivity() {
     private var advertiseCallback: AdvertiseCallback? = null
 //    private var advertisingSet: AdvertisingSet? = null
     private val handler = Handler(Looper.getMainLooper())
-    private val advertisingInterval: Long = 10000
+    private val advertisingInterval: Long = 5000
 
     @RequiresApi(Build.VERSION_CODES.O)
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -62,6 +63,11 @@ class MainActivity : AppCompatActivity() {
 
         setContentView(R.layout.activity_main)
         supportActionBar!!.hide()
+
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
+            Toast.makeText(this, "Android versions is too old " + Build.VERSION.SDK_INT, Toast.LENGTH_LONG).show()
+            Log.i("version", "${Build.VERSION.SDK_INT}")
+        }
 
         bluetoothAdapter = BluetoothAdapter.getDefaultAdapter()
         bluetoothLeAdvertiser = bluetoothAdapter.bluetoothLeAdvertiser
@@ -96,14 +102,14 @@ class MainActivity : AppCompatActivity() {
 
         startButton.setOnClickListener {
             if (!isAdvertising) {
-                startBeacon()
+                startPeriodicAdvertising()
             }
         }
 
         stopButton.setOnClickListener {
             if (isAdvertising) {
 //                Log.i("Callback", "Reacting to button")
-                stopBeacon()
+                stopPeriodicAdvertising()
             }
         }
     }
@@ -126,13 +132,17 @@ class MainActivity : AppCompatActivity() {
             return
         }
 
-        val uuid = busHash[findViewById<RadioButton>(checkedButton).text] ?: return
+        val selectedBus = findViewById<RadioButton>(checkedButton).text
+        val uuid = busHash[selectedBus] ?: return
         val beaconData = createIBeaconData(
             uuid = uuid,
             major = 1,
             minor = 59
         )
 
+        val advertiseData = AdvertiseData.Builder()
+            .addManufacturerData(0x4C00, beaconData) // 0x4C00 is Apple's Manufacturer ID
+            .build()
 
         val params = AdvertisingSetParameters.Builder()
             .setConnectable(false)
@@ -158,14 +168,15 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        bluetoothLeAdvertiser.startAdvertisingSet(params, null, null, null, null, callback)
+        bluetoothLeAdvertiser.startAdvertisingSet(params, advertiseData, null, null, null, callback)
+        statusTextView.text = getString(R.string.advertising_success, selectedBus, uuid)
     }
 
     private fun stopBeacon() {
-        if (advertiseCallback == null) {
-            Log.e("Callback", "AdvertiseCallback is null; cannot stop advertising")
-            return
-        }
+//        if (advertiseCallback == null) {
+//            Log.e("Callback", "AdvertiseCallback is null; cannot stop advertising")
+//            return
+//        }
 
         if (!bluetoothAdapter.isEnabled) {
             Log.e("iBeacon", "Bluetooth is off or not supported; cannot stop advertising")
@@ -180,6 +191,7 @@ class MainActivity : AppCompatActivity() {
             advertisingSet = null
         }
         isAdvertising = false
+        statusTextView.text = "Status: Paused advertising"
     }
 
     private fun createIBeaconData(
@@ -207,7 +219,6 @@ class MainActivity : AppCompatActivity() {
                 handler.postDelayed(this, advertisingInterval)
             }
         })
-        statusTextView.text = getString(R.string.advertising_success)
         startButton.visibility = View.GONE
         stopButton.visibility = View.VISIBLE
         radioGroup.visibility = View.GONE
