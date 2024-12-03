@@ -57,6 +57,23 @@ class MainActivity : AppCompatActivity() {
     private val handler = Handler(Looper.getMainLooper())
     private val advertisingInterval: Long = 5000
 
+    private val callback = object : AdvertisingSetCallback() {
+        override fun onAdvertisingSetStarted(advertisingSet: AdvertisingSet?, txPower: Int, status: Int) {
+            if (status == AdvertisingSetCallback.ADVERTISE_SUCCESS) {
+                Log.i("AdvertisingSet", "Advertising started successfully")
+                this@MainActivity.advertisingSet = advertisingSet
+                isAdvertising = true
+            } else {
+                Log.e("AdvertisingSet", "Failed to start advertising: $status")
+            }
+        }
+
+        override fun onAdvertisingSetStopped(advertisingSet: AdvertisingSet?) {
+            Log.i("AdvertisingSet", "Advertising stopped")
+            isAdvertising = false
+        }
+    }
+
     @RequiresApi(Build.VERSION_CODES.O)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -151,23 +168,6 @@ class MainActivity : AppCompatActivity() {
             .setTxPowerLevel(AdvertisingSetParameters.TX_POWER_HIGH)
             .build()
 
-        val callback = object : AdvertisingSetCallback() {
-            override fun onAdvertisingSetStarted(advertisingSet: AdvertisingSet?, txPower: Int, status: Int) {
-                if (status == AdvertisingSetCallback.ADVERTISE_SUCCESS) {
-                    Log.i("AdvertisingSet", "Advertising started successfully")
-                    this@MainActivity.advertisingSet = advertisingSet
-                    isAdvertising = true
-                } else {
-                    Log.e("AdvertisingSet", "Failed to start advertising: $status")
-                }
-            }
-
-            override fun onAdvertisingSetStopped(advertisingSet: AdvertisingSet?) {
-                Log.i("AdvertisingSet", "Advertising stopped")
-                isAdvertising = false
-            }
-        }
-
         bluetoothLeAdvertiser.startAdvertisingSet(params, advertiseData, null, null, null, callback)
         statusTextView.text = getString(R.string.advertising_success, selectedBus, uuid)
     }
@@ -183,11 +183,7 @@ class MainActivity : AppCompatActivity() {
             return
         }
         advertisingSet?.let {
-            bluetoothLeAdvertiser.stopAdvertisingSet(object : AdvertisingSetCallback() {
-                override fun onAdvertisingSetStopped(advertisingSet: AdvertisingSet?) {
-                    Log.i("AdvertisingSet", "Advertising stopped")
-                }
-            })
+            bluetoothLeAdvertiser.stopAdvertisingSet(callback)
             advertisingSet = null
         }
         isAdvertising = false
