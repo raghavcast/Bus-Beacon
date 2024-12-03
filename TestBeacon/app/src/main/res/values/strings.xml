@@ -3,4 +3,5 @@
     <string name="advertising_success">"Status: Advertising as iBeacon\nBus number: %s\nUUID: %s"</string>
     <string name="advertising_failure">"Status: failed to start advertising %1d"</string>
     <string name="stop_advertising">"Status: Not advertising"</string>
+    <string name="update_advertising">Status: Advertising as iBeacon\nBus number: %s\nUUID: %s\n Major: %d Minor: %d</string>
 </resources>

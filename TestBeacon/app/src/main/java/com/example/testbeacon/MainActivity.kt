@@ -2,9 +2,7 @@ package com.example.testbeacon
 
 import android.Manifest
 import android.bluetooth.BluetoothAdapter
-import android.bluetooth.le.AdvertiseCallback
 import android.bluetooth.le.AdvertiseData
-import android.bluetooth.le.AdvertiseSettings
 import android.bluetooth.le.AdvertisingSet
 import android.bluetooth.le.AdvertisingSetCallback
 import android.bluetooth.le.AdvertisingSetParameters
@@ -26,7 +24,6 @@ import android.widget.Toast
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
-import kotlinx.coroutines.selects.select
 
 class MainActivity : AppCompatActivity() {
     private lateinit var statusTextView: TextView
@@ -38,24 +35,21 @@ class MainActivity : AppCompatActivity() {
     private lateinit var bluetoothAdapter: BluetoothAdapter
 
     private var isAdvertising = false
+    private var isPeriodicallyAdvertising = false
     private var advertisingSet: AdvertisingSet? = null
 
-//    private var selectedBus: String = ""
+    private var currentlyMajor = false
+    private var selectedBus: String? = null
+    private var uuid: String? = null
     private val busHash: HashMap<String, String> = hashMapOf(
         "TN 015 0123" to "27B2F751-228D-4BEA-8A06-F8ADC74388E6".lowercase(),
         "KA 321 3210" to "ACA22A9D-06B2-4789-9669-9313B2F5605A".lowercase()
     )
 
-    private val settings = AdvertiseSettings.Builder()
-        .setAdvertiseMode(AdvertiseSettings.ADVERTISE_MODE_LOW_LATENCY)
-        .setTxPowerLevel(AdvertiseSettings.ADVERTISE_TX_POWER_HIGH)
-        .setConnectable(false)
-        .build()
 
-    private var advertiseCallback: AdvertiseCallback? = null
-//    private var advertisingSet: AdvertisingSet? = null
     private val handler = Handler(Looper.getMainLooper())
-    private val advertisingInterval: Long = 5000
+    private val advertisingInterval: Long = 10000
+    private val updateInterval: Long = 5000
 
     private val callback = object : AdvertisingSetCallback() {
         override fun onAdvertisingSetStarted(advertisingSet: AdvertisingSet?, txPower: Int, status: Int) {
@@ -112,20 +106,21 @@ class MainActivity : AppCompatActivity() {
             ).show()
         }
 
-//        bleBeaconManager = BLEBeaconManager(this)
         if (!hasPermissions()) {
             requestPermissions()
         }
 
         startButton.setOnClickListener {
-            if (!isAdvertising) {
+            if (radioGroup.checkedRadioButtonId == -1) {
+                Toast.makeText(this, "Please choose a bus.", Toast.LENGTH_LONG).show()
+            }
+            else if (!isPeriodicallyAdvertising) {
                 startPeriodicAdvertising()
             }
         }
 
         stopButton.setOnClickListener {
-            if (isAdvertising) {
-//                Log.i("Callback", "Reacting to button")
+            if (isPeriodicallyAdvertising) {
                 stopPeriodicAdvertising()
             }
         }
@@ -133,26 +128,13 @@ class MainActivity : AppCompatActivity() {
 
     @RequiresApi(Build.VERSION_CODES.O)
     private fun startBeacon() {
-        if(!hasPermissions()) {
-            Log.e("BLEBeacon", "Required permissions are not granted")
-            return
-        }
-
         if (!bluetoothAdapter.isEnabled) {
-            Log.e("iBeacon", "Bluetooth is off or not supported; cannot stop advertising")
+            Log.e("iBeacon", "Bluetooth is off or not supported; cannot start advertising")
             return
         }
 
-        val checkedButton = radioGroup.checkedRadioButtonId
-        if (checkedButton == -1) {
-            Toast.makeText(this, "Please choose a bus", Toast.LENGTH_LONG).show()
-            return
-        }
-
-        val selectedBus = findViewById<RadioButton>(checkedButton).text
-        val uuid = busHash[selectedBus] ?: return
         val beaconData = createIBeaconData(
-            uuid = uuid,
+            uuid = uuid!!,
             major = 1,
             minor = 59
         )
@@ -173,11 +155,6 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun stopBeacon() {
-//        if (advertiseCallback == null) {
-//            Log.e("Callback", "AdvertiseCallback is null; cannot stop advertising")
-//            return
-//        }
-
         if (!bluetoothAdapter.isEnabled) {
             Log.e("iBeacon", "Bluetooth is off or not supported; cannot stop advertising")
             return
@@ -206,15 +183,62 @@ class MainActivity : AppCompatActivity() {
         ) + uuidBytes + majorBytes + minorBytes + byteArrayOf((-59).toByte())
     }
 
+    private fun updateBeacon() {
+        Log.i("Update", "updating")
+        val major: Int
+        val minor: Int
+        if (!currentlyMajor) {
+            major = 59
+            minor = 1
+            currentlyMajor = true
+        } else {
+            major = 1
+            minor = 59
+            currentlyMajor = false
+        }
+
+        val beaconData = createIBeaconData(
+            uuid = uuid!!,
+            major = major,
+            minor = minor
+        )
+
+        val advertiseData = AdvertiseData.Builder()
+            .addManufacturerData(0x4C00, beaconData) // 0x4C00 is Apple's Manufacturer ID
+            .build()
+
+        advertisingSet?.setAdvertisingData(advertiseData)
+
+        statusTextView.text = getString(R.string.update_advertising, selectedBus, uuid, major, minor)
+    }
+
     private fun startPeriodicAdvertising() {
-        handler.post(object: Runnable {
+        if(!hasPermissions()) {
+            Log.e("BLEBeacon", "Required permissions are not granted")
+            return
+        }
+
+        val checkedButton = radioGroup.checkedRadioButtonId
+        if (checkedButton == -1) {
+            Toast.makeText(this, "Please choose a bus", Toast.LENGTH_LONG).show()
+            return
+        }
+        selectedBus = findViewById<RadioButton>(checkedButton).text.toString()
+        uuid = busHash[selectedBus] ?: return
+
+        startBeacon()
+
+        val runnable = object: Runnable {
             @RequiresApi(Build.VERSION_CODES.O)
             override fun run() {
-                if (isAdvertising) stopBeacon()
-                else startBeacon()
                 handler.postDelayed(this, advertisingInterval)
+                updateBeacon()
             }
-        })
+        }
+
+        handler.post(runnable)
+
+        isPeriodicallyAdvertising = true
         startButton.visibility = View.GONE
         stopButton.visibility = View.VISIBLE
         radioGroup.visibility = View.GONE
@@ -223,6 +247,7 @@ class MainActivity : AppCompatActivity() {
     private fun stopPeriodicAdvertising() {
         handler.removeCallbacksAndMessages(null)
         stopBeacon()
+        isPeriodicallyAdvertising = false
         statusTextView.text = getString(R.string.stop_advertising)
         startButton.visibility = View.VISIBLE
         stopButton.visibility = View.GONE
@@ -277,8 +302,5 @@ class MainActivity : AppCompatActivity() {
         grantResults: IntArray
     ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-//        if(hasPermissions()) {
-//            startBeacon()
-//        }
     }
 }
