@@ -39,6 +39,7 @@ class MainActivity : AppCompatActivity() {
     private var advertisingSet: AdvertisingSet? = null
 
     private var currentlyMajor = false
+    private var firstTime = true
     private var selectedBus: String? = null
     private var uuid: String? = null
     private val busHash: HashMap<String, String> = hashMapOf(
@@ -151,7 +152,7 @@ class MainActivity : AppCompatActivity() {
             .build()
 
         bluetoothLeAdvertiser.startAdvertisingSet(params, advertiseData, null, null, null, callback)
-        statusTextView.text = getString(R.string.advertising_success, selectedBus, uuid)
+        statusTextView.text = getString(R.string.update_advertising, selectedBus, uuid, 1, 59)
     }
 
     private fun stopBeacon() {
@@ -184,6 +185,10 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun updateBeacon() {
+        if (firstTime) {
+            firstTime = false
+            return
+        }
         Log.i("Update", "updating")
         val major: Int
         val minor: Int
